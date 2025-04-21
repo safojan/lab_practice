@@ -1,0 +1,57 @@
+services:
+ client:
+  image : node:18-alpine
+  build:
+    context: ./client
+    dockerfile: Dockerfile
+  volumes:
+    - ./client:/app/client
+  working_dir: /app/client
+  command: sh -c "npm install && npm start"
+  ports:
+    - "3000:3000"
+  environment:
+    - NODE_ENV=production
+    - REACT_APP_API_URL=http://localhost:3000
+  networks:
+    - app-network
+  deploy:
+   replicas: 3
+   update_config:
+      parallelism: 1
+      delay: 10s
+   restart_policy:
+    condition: on-failure
+   
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:3000"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+  
+ server:
+    image : node:14-alpine
+    container_name: server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server:/app/backend
+    working_dir: /app/server
+    command: sh -c "npm install && npm start"
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+ mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    volumes:
+      - ./data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+networks:
+  app-network:
+    driver: bridge
